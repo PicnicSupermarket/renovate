@@ -1,13 +1,19 @@
 import { envMock, exec, mockExecSequence } from '../../../test/exec-util';
 import { env, getName } from '../../../test/util';
+import _fs from 'fs-extra';
+import dataFiles from '../../data-files.generated';
 import {
+  extractPackageFile,
   getPythonAlias,
   parsePythonVersion,
   pythonVersions,
   resetModule,
 } from './extract';
 
+const fs: jest.Mocked<typeof _fs> = _fs as any;
+
 jest.mock('child_process');
+jest.mock('fs-extra');
 jest.mock('../../util/exec/env');
 
 describe(getName(__filename), () => {
@@ -37,5 +43,17 @@ describe(getName(__filename), () => {
       expect(execSnapshots).toMatchSnapshot();
       expect(execSnapshots).toHaveLength(3);
     });
+  });
+  describe('extractPackageFile', () => {
+    it('can parse a setup.py importing stuff from its own package', async () => {
+      fs.outputFile.mockResolvedValueOnce(null as never);
+      fs.readFile.mockResolvedValueOnce(dataFiles.get('extract.py') as any);
+      const pkgInfo = await extractPackageFile(
+        '',
+        'lib/manager/pip_setup/__fixtures__/setup-3.py',
+        {}
+      );
+      expect(pkgInfo.packageFileVersion).toEqual('1.0');
+    }, 15000);
   });
 });
